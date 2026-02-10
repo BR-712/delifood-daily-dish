@@ -21,7 +21,7 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Calendario", url: "/dashboard/calendario", icon: CalendarDays },
+  { title: "Pedidos", url: "/dashboard/pedidos", icon: CalendarDays },
   { title: "Inventario", url: "/dashboard/inventario", icon: Package },
   { title: "Finanzas", url: "/dashboard/finanzas", icon: DollarSign },
   { title: "Marketing", url: "/dashboard/marketing", icon: Megaphone },
