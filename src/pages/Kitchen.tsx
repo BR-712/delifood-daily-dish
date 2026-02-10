@@ -14,9 +14,12 @@ const Kitchen = () => {
   const [saleModalOpen, setSaleModalOpen] = useState(false);
 
   const today = format(new Date(), "EEEE, d 'de' MMMM", { locale: es });
-  const goalTotal = 64;
-  const goalDone = 20;
-  const progressPercent = Math.round((goalDone / goalTotal) * 100);
+
+  const dailyGoals = [
+    { product: "Hayacas", goal: 64, done: 20 },
+    { product: "Pastel de Pollo", goal: 30, done: 12 },
+    { product: "Pastel de Cerdo", goal: 20, done: 8 },
+  ];
 
   return (
     <div className="min-h-screen bg-kitchen-bg">
@@ -30,13 +33,20 @@ const Kitchen = () => {
           <div className="w-10" />
         </div>
 
-        {/* Goal Progress */}
-        <div className="bg-accent rounded-xl p-4">
-          <div className="flex justify-between items-baseline mb-2">
-            <span className="text-sm font-semibold text-foreground">Meta Diaria: Hayacas</span>
-            <span className="text-2xl font-black text-primary">{goalDone}/{goalTotal}</span>
-          </div>
-          <Progress value={progressPercent} className="h-4 rounded-full bg-muted [&>div]:bg-gradient-warm [&>div]:rounded-full" />
+        {/* Goal Progress - All Products */}
+        <div className="space-y-3">
+          {dailyGoals.map((item) => {
+            const percent = Math.round((item.done / item.goal) * 100);
+            return (
+              <div key={item.product} className="bg-accent rounded-xl p-4">
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-sm font-semibold text-foreground">Meta Diaria: {item.product}</span>
+                  <span className="text-2xl font-black text-primary">{item.done}/{item.goal}</span>
+                </div>
+                <Progress value={percent} className="h-4 rounded-full bg-muted [&>div]:bg-gradient-warm [&>div]:rounded-full" />
+              </div>
+            );
+          })}
         </div>
       </header>
 
