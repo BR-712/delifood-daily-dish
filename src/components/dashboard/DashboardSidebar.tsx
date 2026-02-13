@@ -6,6 +6,7 @@ import {
   Megaphone,
   ArrowLeft,
   ShoppingBasket,
+  ChefHat,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +28,7 @@ const items = [
   { title: "Inventario", url: "/dashboard/inventario", icon: Package },
   { title: "Finanzas", url: "/dashboard/finanzas", icon: DollarSign },
   { title: "Marketing", url: "/dashboard/marketing", icon: Megaphone },
+  { title: "Recetas", url: "/dashboard/recetas", icon: ChefHat },
 ];
 
 const DashboardSidebar = () => {

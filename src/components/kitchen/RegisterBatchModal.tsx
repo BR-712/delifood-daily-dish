@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PRODUCTS } from "@/lib/data";
 
 interface Props {
   open: boolean;
@@ -45,9 +46,9 @@ const RegisterBatchModal = ({ open, onOpenChange }: Props) => {
                 <SelectValue placeholder="Seleccionar producto..." />
               </SelectTrigger>
               <SelectContent className="bg-card z-50">
-                <SelectItem value="hayaca">Hayaca</SelectItem>
-                <SelectItem value="pastel_pollo">Pastel de Pollo</SelectItem>
-                <SelectItem value="pastel_cerdo">Pastel de Cerdo</SelectItem>
+                {PRODUCTS.filter(p => p.active).map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

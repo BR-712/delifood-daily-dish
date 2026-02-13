@@ -39,7 +39,7 @@ const Products = () => {
 
   const addProduct = () => {
     const id = newProduct.name.toLowerCase().replace(/\s+/g, "_");
-    setProducts(prev => [...prev, { id, name: newProduct.name, price: newProduct.price, active: true }]);
+    setProducts(prev => [...prev, { id, name: newProduct.name, price: newProduct.price, active: true, riceBase: "none" as const, meatComposition: { chicken: 0, pork: 0 } }]);
     setNewProduct({ name: "", price: 0 });
     setDialogOpen(false);
   };
