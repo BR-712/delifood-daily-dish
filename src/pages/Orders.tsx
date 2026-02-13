@@ -13,25 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Paperclip, Plus, Pencil, Check, X } from "lucide-react";
-
-interface Order {
-  id: string;
-  client: string;
-  deliveryDate: string;
-  items: string;
-  status: "Pendiente" | "Confirmado" | "Entregado";
-  totalPrice: number;
-  hasPaid: boolean;
-}
-
-const initialOrders: Order[] = [
-  { id: "ORD-001", client: "María López", deliveryDate: "2026-02-12", items: "6 Hayacas", status: "Pendiente", totalPrice: 90000, hasPaid: false },
-  { id: "ORD-002", client: "Carlos Ruiz", deliveryDate: "2026-02-13", items: "12 Hayacas, 4 Pasteles", status: "Confirmado", totalPrice: 228000, hasPaid: true },
-  { id: "ORD-003", client: "Ana Torres", deliveryDate: "2026-02-14", items: "3 Pasteles Pollo", status: "Pendiente", totalPrice: 36000, hasPaid: false },
-  { id: "ORD-004", client: "Luis Méndez", deliveryDate: "2026-02-11", items: "10 Hayacas", status: "Entregado", totalPrice: 150000, hasPaid: true },
-  { id: "ORD-005", client: "Sandra Vega", deliveryDate: "2026-02-15", items: "2 Hayacas, 2 Pasteles", status: "Pendiente", totalPrice: 54000, hasPaid: false },
-  { id: "ORD-006", client: "Jorge Díaz", deliveryDate: "2026-02-12", items: "8 Hayacas", status: "Confirmado", totalPrice: 120000, hasPaid: true },
-];
+import { initialOrders, Order, PRODUCTS, PaymentLine, PaymentStatus } from "@/lib/data";
+import SplitPaymentForm from "@/components/kitchen/SplitPaymentForm";
 
 const statusBadge: Record<string, string> = {
   Pendiente: "bg-secondary/20 text-secondary-foreground border-secondary/40",
@@ -39,12 +22,27 @@ const statusBadge: Record<string, string> = {
   Entregado: "bg-success/15 text-success border-success/30",
 };
 
+const paymentBadge: Record<PaymentStatus, string> = {
+  Pendiente: "bg-muted text-muted-foreground border-border",
+  Parcial: "bg-secondary/20 text-secondary-foreground border-secondary/40",
+  Pagado: "bg-success/15 text-success border-success/30",
+};
+
 const Orders = () => {
   const [orders, setOrders] = useState(initialOrders);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [payDialogOrder, setPayDialogOrder] = useState<Order | null>(null);
+
+  const activeProducts = PRODUCTS.filter(p => p.active);
+
+  // New order state
   const [newOrder, setNewOrder] = useState({ client: "", deliveryDate: "", hayacas: 0, pasteles: 0, price: 0 });
+  const [newOrderPayments, setNewOrderPayments] = useState<PaymentLine[]>([{ method: "Efectivo" as const, amount: 0 }]);
+
+  // Payment dialog state
+  const [payPayments, setPayPayments] = useState<PaymentLine[]>([{ method: "Efectivo" as const, amount: 0 }]);
 
   const startEdit = (order: Order) => {
     setEditingId(order.id);
@@ -60,19 +58,53 @@ const Orders = () => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
   };
 
+  const computePaymentStatus = (payments: PaymentLine[], total: number): PaymentStatus => {
+    const paid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    if (paid >= total) return "Pagado";
+    if (paid > 0) return "Parcial";
+    return "Pendiente";
+  };
+
   const addOrder = () => {
     const items = [
       newOrder.hayacas > 0 ? `${newOrder.hayacas} Hayacas` : "",
       newOrder.pasteles > 0 ? `${newOrder.pasteles} Pasteles` : "",
     ].filter(Boolean).join(", ");
     const id = `ORD-${String(orders.length + 1).padStart(3, "0")}`;
+    const finalPrice = newOrder.price || suggestedPrice;
+    const validPayments = newOrderPayments.filter(p => p.amount > 0);
+    const ps = computePaymentStatus(validPayments, finalPrice);
+
+    // Snapshot current prices
+    const snapshotPrices: Record<string, number> = {};
+    activeProducts.forEach(p => { snapshotPrices[p.id] = p.price; });
+
     setOrders(prev => [...prev, {
       id, client: newOrder.client, deliveryDate: newOrder.deliveryDate,
       items: items || "Sin productos", status: "Pendiente" as const,
-      totalPrice: newOrder.price, hasPaid: false,
+      totalPrice: finalPrice,
+      snapshotPrices,
+      payments: validPayments,
+      paymentStatus: ps,
     }]);
     setNewOrder({ client: "", deliveryDate: "", hayacas: 0, pasteles: 0, price: 0 });
+    setNewOrderPayments([{ method: "Efectivo", amount: 0 }]);
     setDialogOpen(false);
+  };
+
+  const openPayDialog = (order: Order) => {
+    setPayDialogOrder(order);
+    setPayPayments(order.payments.length > 0 ? [...order.payments] : [{ method: "Efectivo", amount: 0 }]);
+  };
+
+  const savePayments = () => {
+    if (!payDialogOrder) return;
+    const validPayments = payPayments.filter(p => p.amount > 0);
+    const ps = computePaymentStatus(validPayments, payDialogOrder.totalPrice);
+    setOrders(prev => prev.map(o =>
+      o.id === payDialogOrder.id ? { ...o, payments: validPayments, paymentStatus: ps } : o
+    ));
+    setPayDialogOrder(null);
   };
 
   const suggestedPrice = (newOrder.hayacas * 15000) + (newOrder.pasteles * 12000);
@@ -90,7 +122,7 @@ const Orders = () => {
               <Plus className="w-4 h-4" /> Nuevo Pedido
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-black">Nuevo Pedido</DialogTitle>
             </DialogHeader>
@@ -129,6 +161,14 @@ const Orders = () => {
                   className="border-primary/50 font-bold text-lg"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="font-bold">Pago</Label>
+                <SplitPaymentForm
+                  totalAmount={newOrder.price || suggestedPrice}
+                  payments={newOrderPayments}
+                  onChange={setNewOrderPayments}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button onClick={addOrder} className="bg-gradient-warm text-primary-foreground font-bold rounded-xl w-full">
@@ -150,6 +190,7 @@ const Orders = () => {
                 <TableHead className="font-semibold">Productos</TableHead>
                 <TableHead className="font-semibold">Estado</TableHead>
                 <TableHead className="font-semibold">Precio Total</TableHead>
+                <TableHead className="font-semibold">Pago</TableHead>
                 <TableHead className="font-semibold">Comprobante</TableHead>
               </TableRow>
             </TableHeader>
@@ -199,7 +240,21 @@ const Orders = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                    <Badge
+                      className={`cursor-pointer font-semibold ${paymentBadge[order.paymentStatus]}`}
+                      variant="outline"
+                      onClick={() => openPayDialog(order)}
+                    >
+                      {order.paymentStatus}
+                      {order.paymentStatus === "Parcial" && (
+                        <span className="ml-1 text-xs">
+                          (${order.payments.reduce((s, p) => s + p.amount, 0).toLocaleString()})
+                        </span>
+                      )}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary" onClick={() => openPayDialog(order)}>
                       <Paperclip className="w-4 h-4" />
                     </Button>
                   </TableCell>
@@ -209,6 +264,32 @@ const Orders = () => {
           </Table>
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={!!payDialogOrder} onOpenChange={(v) => !v && setPayDialogOrder(null)}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">
+              Pago - {payDialogOrder?.id}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">{payDialogOrder?.client} • {payDialogOrder?.items}</p>
+          </DialogHeader>
+          {payDialogOrder && (
+            <div className="py-4">
+              <SplitPaymentForm
+                totalAmount={payDialogOrder.totalPrice}
+                payments={payPayments}
+                onChange={setPayPayments}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={savePayments} className="bg-gradient-warm text-primary-foreground font-bold rounded-xl w-full">
+              Guardar Pago
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
