@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Package, ShoppingCart, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Package, ShoppingCart, ArrowLeft, CheckCircle2, Calculator } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import RegisterBatchModal from "@/components/kitchen/RegisterBatchModal";
 import ExpressSaleModal from "@/components/kitchen/ExpressSaleModal";
+import IngredientCalculatorModal from "@/components/kitchen/IngredientCalculatorModal";
 import TodayOrders from "@/components/kitchen/TodayOrders";
 import { initialDailyGoals, DailyGoal } from "@/lib/data";
 
@@ -19,6 +20,7 @@ const Kitchen = () => {
   const navigate = useNavigate();
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [saleModalOpen, setSaleModalOpen] = useState(false);
+  const [calcModalOpen, setCalcModalOpen] = useState(false);
   const [goals, setGoals] = useState<DailyGoal[]>(initialDailyGoals);
 
   const today = format(new Date(), "EEEE, d 'de' MMMM", { locale: es });
@@ -95,6 +97,14 @@ const Kitchen = () => {
             <ShoppingCart className="w-10 h-10" />
             <span className="text-2xl">Venta Rápida</span>
           </button>
+
+          <button
+            onClick={() => setCalcModalOpen(true)}
+            className="kitchen-button bg-card border-2 border-primary/30 text-foreground shadow-warm flex items-center justify-center gap-4 min-h-[80px]"
+          >
+            <Calculator className="w-8 h-8 text-primary" />
+            <span className="text-xl">👩‍🍳 Ver Qué Alistar</span>
+          </button>
         </div>
 
         {/* Tabs: Pedidos + Detalles */}
@@ -146,6 +156,7 @@ const Kitchen = () => {
       {/* Modals */}
       <RegisterBatchModal open={batchModalOpen} onOpenChange={setBatchModalOpen} />
       <ExpressSaleModal open={saleModalOpen} onOpenChange={setSaleModalOpen} />
+      <IngredientCalculatorModal open={calcModalOpen} onOpenChange={setCalcModalOpen} />
     </div>
   );
 };
