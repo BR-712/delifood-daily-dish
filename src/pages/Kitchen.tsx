@@ -1,25 +1,30 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Package, ShoppingCart, ArrowLeft } from "lucide-react";
+import { Package, ShoppingCart, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import RegisterBatchModal from "@/components/kitchen/RegisterBatchModal";
 import ExpressSaleModal from "@/components/kitchen/ExpressSaleModal";
 import TodayOrders from "@/components/kitchen/TodayOrders";
+import { initialDailyGoals, DailyGoal } from "@/lib/data";
 
 const Kitchen = () => {
   const navigate = useNavigate();
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [saleModalOpen, setSaleModalOpen] = useState(false);
+  const [goals, setGoals] = useState<DailyGoal[]>(initialDailyGoals);
 
   const today = format(new Date(), "EEEE, d 'de' MMMM", { locale: es });
 
-  const dailyGoals = [
-    { product: "Hayacas", goal: 64, done: 20 },
-    { product: "Pastel de Pollo", goal: 30, done: 12 },
-    { product: "Pastel de Cerdo", goal: 20, done: 8 },
-  ];
+  const pendingGoals = goals.filter(g => g.done < g.goal);
+  const allGoals = goals;
 
   return (
     <div className="min-h-screen bg-kitchen-bg">
@@ -33,24 +38,45 @@ const Kitchen = () => {
           <div className="w-10" />
         </div>
 
-        {/* Goal Progress - All Products */}
-        <div className="space-y-3">
-          {dailyGoals.map((item) => {
-            const percent = Math.round((item.done / item.goal) * 100);
-            return (
-              <div key={item.product} className="bg-accent rounded-xl p-4">
-                <div className="flex justify-between items-baseline mb-2">
-                  <span className="text-sm font-semibold text-foreground">Meta Diaria: {item.product}</span>
-                  <span className="text-2xl font-black text-primary">{item.done}/{item.goal}</span>
-                </div>
-                <Progress value={percent} className="h-4 rounded-full bg-muted [&>div]:bg-gradient-warm [&>div]:rounded-full" />
-              </div>
-            );
-          })}
-        </div>
+        {/* Goal Carousel - horizontal swipe, auto-hide completed */}
+        {pendingGoals.length > 0 ? (
+          <Carousel
+            opts={{ align: "start", dragFree: true }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-2">
+              {pendingGoals.map((item) => {
+                const remaining = item.goal - item.done;
+                return (
+                  <CarouselItem key={item.productId} className="pl-2 basis-[70%] sm:basis-[45%]">
+                    <div className="bg-accent rounded-xl p-4">
+                      <p className="text-sm font-semibold text-muted-foreground mb-1">{item.product}</p>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-4xl font-black text-primary">
+                          {remaining}
+                        </span>
+                        <span className="text-sm text-muted-foreground font-medium">
+                          faltan
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {item.done}/{item.goal} hechas
+                      </p>
+                    </div>
+                  </CarouselItem>
+                );
+              })}
+            </CarouselContent>
+          </Carousel>
+        ) : (
+          <div className="bg-success/10 rounded-xl p-4 flex items-center gap-3">
+            <CheckCircle2 className="w-6 h-6 text-success" />
+            <span className="font-bold text-success">¡Todas las metas cumplidas! 🎉</span>
+          </div>
+        )}
       </header>
 
-      {/* Main Action Area */}
+      {/* Main Area */}
       <main className="p-4 space-y-4 max-w-lg mx-auto">
         {/* Big Buttons */}
         <div className="grid gap-4">
@@ -71,8 +97,50 @@ const Kitchen = () => {
           </button>
         </div>
 
-        {/* Today's Orders */}
-        <TodayOrders />
+        {/* Tabs: Pedidos + Detalles */}
+        <Tabs defaultValue="pedidos" className="w-full">
+          <TabsList className="w-full grid grid-cols-2 rounded-xl h-12">
+            <TabsTrigger value="pedidos" className="text-base font-bold rounded-lg">📋 Pedidos</TabsTrigger>
+            <TabsTrigger value="detalles" className="text-base font-bold rounded-lg">📊 Detalles</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pedidos">
+            <TodayOrders />
+          </TabsContent>
+
+          <TabsContent value="detalles">
+            <div className="bg-card rounded-2xl border border-border overflow-hidden mt-3">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-accent/50">
+                    <TableHead className="font-semibold">Producto</TableHead>
+                    <TableHead className="font-semibold text-center">Meta</TableHead>
+                    <TableHead className="font-semibold text-center">Hechas</TableHead>
+                    <TableHead className="font-semibold text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allGoals.map(g => (
+                    <TableRow key={g.productId}>
+                      <TableCell className="font-semibold">{g.product}</TableCell>
+                      <TableCell className="text-center text-lg font-bold">{g.goal}</TableCell>
+                      <TableCell className="text-center text-lg font-bold">{g.done}</TableCell>
+                      <TableCell className="text-center">
+                        {g.done >= g.goal ? (
+                          <CheckCircle2 className="w-6 h-6 text-success mx-auto" />
+                        ) : (
+                          <span className="text-sm font-semibold text-primary">
+                            Faltan {g.goal - g.done}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Modals */}

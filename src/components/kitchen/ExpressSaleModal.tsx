@@ -11,52 +11,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PRODUCTS, PaymentLine } from "@/lib/data";
+import SplitPaymentForm from "./SplitPaymentForm";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const PRICES: Record<string, number> = {
-  hayaca: 15000,
-  pastel_pollo: 12000,
-  pastel_cerdo: 12000,
-};
-
-const paymentMethods = ["Nequi", "Daviplata", "Efectivo", "Transferencia"];
-
 const ExpressSaleModal = ({ open, onOpenChange }: Props) => {
   const [product, setProduct] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [price, setPrice] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
+  const [payments, setPayments] = useState<PaymentLine[]>([{ method: "Efectivo", amount: 0 }]);
 
-  const suggestedPrice = product ? PRICES[product] * Number(quantity || 1) : 0;
+  const activeProducts = PRODUCTS.filter(p => p.active);
+  const productPrice = activeProducts.find(p => p.id === product)?.price || 0;
+  const suggestedPrice = productPrice * Number(quantity || 1);
+  const finalPrice = Number(price) || suggestedPrice;
 
   const handleProductChange = (val: string) => {
     setProduct(val);
-    setPrice(String(PRICES[val] * Number(quantity || 1)));
+    const p = activeProducts.find(pr => pr.id === val);
+    if (p) setPrice(String(p.price * Number(quantity || 1)));
   };
 
   const handleQuantityChange = (val: string) => {
     setQuantity(val);
     if (product) {
-      setPrice(String(PRICES[product] * Number(val || 1)));
+      setPrice(String(productPrice * Number(val || 1)));
     }
   };
 
+  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const paymentStatus = totalPaid >= finalPrice ? "Pagado" : totalPaid > 0 ? "Parcial" : "Pendiente";
+
   const handleSubmit = () => {
-    toast.success(`Venta registrada: ${quantity}x ${product} por $${Number(price).toLocaleString()}`);
+    toast.success(`Venta registrada: ${quantity}x ${product} por $${finalPrice.toLocaleString()} (${paymentStatus})`);
     setProduct("");
     setQuantity("1");
     setPrice("");
-    setPaymentMethod("");
+    setPayments([{ method: "Efectivo", amount: 0 }]);
     onOpenChange(false);
   };
 
+  const hasValidPayment = payments.some(p => p.amount > 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card max-w-md mx-auto">
+      <DialogContent className="bg-card max-w-md mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Venta Rápida</DialogTitle>
         </DialogHeader>
@@ -69,9 +72,9 @@ const ExpressSaleModal = ({ open, onOpenChange }: Props) => {
                 <SelectValue placeholder="Seleccionar producto..." />
               </SelectTrigger>
               <SelectContent className="bg-card z-50">
-                <SelectItem value="hayaca">Hayaca</SelectItem>
-                <SelectItem value="pastel_pollo">Pastel de Pollo</SelectItem>
-                <SelectItem value="pastel_cerdo">Pastel de Cerdo</SelectItem>
+                {activeProducts.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -104,29 +107,19 @@ const ExpressSaleModal = ({ open, onOpenChange }: Props) => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-base font-semibold">Método de Pago</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {paymentMethods.map((method) => (
-                <button
-                  key={method}
-                  onClick={() => setPaymentMethod(method)}
-                  className={`py-3 px-4 rounded-xl font-semibold text-base transition-all border-2 ${
-                    paymentMethod === method
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-foreground hover:border-primary/40"
-                  }`}
-                >
-                  {method}
-                </button>
-              ))}
-            </div>
+            <Label className="text-base font-semibold">Pago</Label>
+            <SplitPaymentForm
+              totalAmount={finalPrice}
+              payments={payments}
+              onChange={setPayments}
+            />
           </div>
         </div>
 
         <DialogFooter>
           <Button
             onClick={handleSubmit}
-            disabled={!product || !quantity || !price || !paymentMethod}
+            disabled={!product || !quantity || !price || !hasValidPayment}
             className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-golden text-secondary-foreground"
           >
             Registrar Venta

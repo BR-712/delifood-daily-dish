@@ -5,6 +5,7 @@ import {
   DollarSign,
   Megaphone,
   ArrowLeft,
+  ShoppingBasket,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +23,7 @@ import {
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Pedidos", url: "/dashboard/pedidos", icon: CalendarDays },
+  { title: "Productos", url: "/dashboard/productos", icon: ShoppingBasket },
   { title: "Inventario", url: "/dashboard/inventario", icon: Package },
   { title: "Finanzas", url: "/dashboard/finanzas", icon: DollarSign },
   { title: "Marketing", url: "/dashboard/marketing", icon: Megaphone },
